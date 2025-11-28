@@ -2,9 +2,13 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
 function createWindow() {
+  // 设置窗口图标路径（开发环境）
+  const iconPath = path.join(__dirname, 'build', 'icon.png');
+
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: iconPath, // 窗口图标
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
