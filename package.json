@@ -29,7 +29,12 @@
       "icon": "build/icon.icns"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
       "icon": "build/icon.ico"
     },
     "linux": {
