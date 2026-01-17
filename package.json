@@ -22,7 +22,7 @@
   },
   "build": {
     "appId": "com.imgbed.desktop",
-    "productName": "Imgbed",
+    "productName": "图床小镇",
     "downloadAlternateFFmpeg": true,
     "directories": {
       "output": "dist"
@@ -58,7 +58,7 @@
         }
       ],
       "icon": "build/icon.ico",
-      "publisherName": "Imgbed",
+      "publisherName": "图床小镇",
       "requestedExecutionLevel": "asInvoker",
       "verifyUpdateCodeSignature": false
     },
@@ -67,7 +67,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Imgbed",
+      "shortcutName": "图床小镇",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",

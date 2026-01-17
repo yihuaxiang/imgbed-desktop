@@ -169,7 +169,7 @@ function createTray() {
 
     // 创建托盘图标
     tray = new Tray(icon);
-    tray.setToolTip('Imgbed');
+    tray.setToolTip('图床小镇');
 
   // 创建托盘菜单
   const contextMenu = Menu.buildFromTemplate([
@@ -247,7 +247,7 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: true
     },
-    title: 'Imgbed'
+    title: '图床小镇'
   });
 
   // 加载 imgbed.cn 网站
