@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置 - Imgbed</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 24px;
+      color: #222;
+    }
+
+    .setting-item {
+      margin-bottom: 24px;
+    }
+
+    .setting-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .setting-label-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: #555;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #4CAF50;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    .shortcut-input-group {
+      margin-top: 12px;
+    }
+
+    .shortcut-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      background: #fafafa;
+    }
+
+    .shortcut-input:focus {
+      outline: none;
+      border-color: #4CAF50;
+      background: white;
+    }
+
+    .shortcut-input:disabled {
+      background: #f0f0f0;
+      color: #999;
+      cursor: not-allowed;
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #888;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #eee;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #45a049;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .error-message {
+      color: #f44336;
+      font-size: 12px;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>设置</h1>
+
+    <div class="setting-item">
+      <div class="setting-label">
+        <span class="setting-label-text">启用上传快捷键</span>
+        <label class="switch">
+          <input type="checkbox" id="shortcutEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="help-text">
+        启用后，按下设置的快捷键即可自动上传剪切板中的图片
+      </div>
+    </div>
+
+    <div class="setting-item">
+      <div class="setting-label">
+        <span class="setting-label-text">快捷键</span>
+      </div>
+      <div class="shortcut-input-group">
+        <input 
+          type="text" 
+          id="shortcutInput" 
+          class="shortcut-input" 
+          placeholder="CommandOrControl+Shift+U"
+          disabled
+        >
+        <div class="help-text">
+          支持的修饰键：Command (Mac) / Control (Win/Linux)、Shift、Alt、Option<br>
+          格式示例：CommandOrControl+Shift+U
+        </div>
+        <div class="error-message" id="shortcutError"></div>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button class="btn-secondary" id="cancelBtn">取消</button>
+      <button class="btn-primary" id="saveBtn">保存</button>
+    </div>
+  </div>
+
+  <script>
+    let currentSettings = {};
+
+    // 加载设置
+    async function loadSettings() {
+      try {
+        currentSettings = await window.electronAPI.getSettings();
+        document.getElementById('shortcutEnabled').checked = currentSettings.uploadShortcutEnabled || false;
+        document.getElementById('shortcutInput').value = currentSettings.uploadShortcut || 'CommandOrControl+Shift+U';
+        updateShortcutInputState();
+      } catch (error) {
+        console.error('加载设置失败:', error);
+      }
+    }
+
+    // 更新快捷键输入框状态
+    function updateShortcutInputState() {
+      const enabled = document.getElementById('shortcutEnabled').checked;
+      document.getElementById('shortcutInput').disabled = !enabled;
+    }
+
+    // 保存设置
+    async function saveSettings() {
+      const enabled = document.getElementById('shortcutEnabled').checked;
+      const shortcut = document.getElementById('shortcutInput').value.trim();
+
+      // 验证快捷键格式
+      if (enabled && !shortcut) {
+        showError('请输入快捷键');
+        return;
+      }
+
+      // 测试快捷键是否可用
+      if (enabled && shortcut) {
+        const testResult = await window.electronAPI.testShortcut(shortcut);
+        if (!testResult.success) {
+          showError(testResult.error || '快捷键不可用');
+          return;
+        }
+      }
+
+      try {
+        const result = await window.electronAPI.saveSettings({
+          uploadShortcutEnabled: enabled,
+          uploadShortcut: shortcut
+        });
+
+        if (result.success) {
+          // 关闭窗口
+          window.close();
+        } else {
+          showError('保存失败');
+        }
+      } catch (error) {
+        console.error('保存设置失败:', error);
+        showError('保存失败: ' + error.message);
+      }
+    }
+
+    // 显示错误信息
+    function showError(message) {
+      const errorEl = document.getElementById('shortcutError');
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+      setTimeout(() => {
+        errorEl.classList.remove('show');
+      }, 3000);
+    }
+
+    // 事件监听
+    document.getElementById('shortcutEnabled').addEventListener('change', updateShortcutInputState);
+    document.getElementById('saveBtn').addEventListener('click', saveSettings);
+    document.getElementById('cancelBtn').addEventListener('click', () => window.close());
+
+    // 页面加载时获取设置
+    loadSettings();
+  </script>
+</body>
+</html>

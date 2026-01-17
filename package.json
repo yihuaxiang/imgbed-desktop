@@ -29,6 +29,12 @@
     },
     "files": [
       "main.js",
+      "settings.js",
+      "shortcut-manager.js",
+      "settings-window.js",
+      "upload-injector.js",
+      "preload-settings.js",
+      "settings.html",
       "build/**/*"
     ],
     "extraResources": [
