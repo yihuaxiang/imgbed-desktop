@@ -27,6 +27,17 @@
     "directories": {
       "output": "dist"
     },
+    "files": [
+      "main.js",
+      "build/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build",
+        "to": "build",
+        "filter": ["**/*"]
+      }
+    ],
     "mac": {
       "category": "public.app-category.utilities",
       "target": ["dmg"],

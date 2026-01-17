@@ -1,23 +1,79 @@
-const { app, BrowserWindow, Tray, Menu } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 // 全局变量保存窗口和托盘引用
 let mainWindow = null;
 let tray = null;
 
+// 获取资源路径（兼容开发环境和打包环境）
+function getResourcePath(relativePath) {
+  // 在打包后的应用中，资源文件在 app.asar 或 resources 目录
+  if (app.isPackaged) {
+    // 首先尝试 resources 目录（extraResources 放置的位置）
+    // 这是最可靠的方式，因为 nativeImage 可以直接读取
+    const resourcesPath = path.join(process.resourcesPath, relativePath);
+    if (fs.existsSync(resourcesPath)) {
+      return resourcesPath;
+    }
+    // 如果不存在，尝试使用 app.getAppPath() 获取应用路径
+    const appPath = path.join(app.getAppPath(), relativePath);
+    if (fs.existsSync(appPath)) {
+      return appPath;
+    }
+    // 最后尝试 app.asar 中的路径
+    return path.join(process.resourcesPath, 'app.asar', relativePath);
+  } else {
+    // 开发环境，使用 __dirname
+    return path.join(__dirname, relativePath);
+  }
+}
+
 // 创建系统托盘
 function createTray() {
-  // 根据平台选择图标
-  let iconPath;
-  if (process.platform === 'win32') {
-    iconPath = path.join(__dirname, 'build', 'icon.ico');
-  } else {
-    iconPath = path.join(__dirname, 'build', 'icon.png');
-  }
+  try {
+    // 根据平台选择图标
+    let iconPath;
+    if (process.platform === 'win32') {
+      iconPath = getResourcePath(path.join('build', 'icon.ico'));
+      // 如果 .ico 文件不存在，尝试使用 .png
+      if (!fs.existsSync(iconPath)) {
+        console.log('ICO 文件不存在，尝试使用 PNG:', iconPath);
+        iconPath = getResourcePath(path.join('build', 'icon.png'));
+      }
+    } else {
+      iconPath = getResourcePath(path.join('build', 'icon.png'));
+    }
 
-  // 创建托盘图标
-  tray = new Tray(iconPath);
-  tray.setToolTip('Imgbed');
+    // 检查文件是否存在
+    if (!fs.existsSync(iconPath)) {
+      console.error('托盘图标文件不存在:', iconPath);
+      // 尝试使用备用路径
+      const fallbackPath = path.join(__dirname, 'build', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
+      if (fs.existsSync(fallbackPath)) {
+        iconPath = fallbackPath;
+        console.log('使用备用图标路径:', iconPath);
+      } else {
+        console.error('备用图标文件也不存在:', fallbackPath);
+        console.error('应用路径:', app.getAppPath());
+        console.error('资源路径:', process.resourcesPath);
+        console.error('是否打包:', app.isPackaged);
+        return;
+      }
+    }
+
+    console.log('使用图标路径:', iconPath);
+
+    // 使用 nativeImage 加载图标（Windows 上更可靠）
+    const icon = nativeImage.createFromPath(iconPath);
+    if (icon.isEmpty()) {
+      console.error('无法加载托盘图标（图标为空）:', iconPath);
+      return;
+    }
+
+    // 创建托盘图标
+    tray = new Tray(icon);
+    tray.setToolTip('Imgbed');
 
   // 创建托盘菜单
   const contextMenu = Menu.buildFromTemplate([
@@ -46,19 +102,24 @@ function createTray() {
     }
   ]);
 
-  tray.setContextMenu(contextMenu);
+    tray.setContextMenu(contextMenu);
 
-  // 处理托盘图标点击事件
-  tray.on('click', () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
+    // 处理托盘图标点击事件
+    tray.on('click', () => {
+      if (mainWindow) {
+        if (mainWindow.isVisible()) {
+          mainWindow.hide();
+        } else {
+          mainWindow.show();
+          mainWindow.focus();
+        }
       }
-    }
-  });
+    });
+
+    console.log('系统托盘图标创建成功');
+  } catch (error) {
+    console.error('创建系统托盘失败:', error);
+  }
 }
 
 function createWindow() {
