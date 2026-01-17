@@ -1,6 +1,9 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { loadSettings } = require('./settings');
+const { setMainWindow, registerShortcut, unregisterAll } = require('./shortcut-manager');
+const { createSettingsWindow, init: initSettingsWindow } = require('./settings-window');
 
 // 全局变量保存窗口和托盘引用
 let mainWindow = null;
@@ -27,6 +30,99 @@ function getResourcePath(relativePath) {
     // 开发环境，使用 __dirname
     return path.join(__dirname, relativePath);
   }
+}
+
+// 创建应用菜单栏
+function createApplicationMenu() {
+  const packageJson = require('./package.json');
+  const appName = packageJson.productName || packageJson.name;
+  const appVersion = packageJson.version;
+
+  // 显示关于对话框
+  function showAboutDialog() {
+    dialog.showMessageBox(mainWindow || null, {
+      type: 'info',
+      title: '关于',
+      message: appName,
+      detail: `版本 ${appVersion}\n\n图床小镇 - 简单易用的图床服务\n\n官网：imgbed.cn`,
+      buttons: ['访问官网', '确定'],
+      defaultId: 1,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        // 点击了"访问官网"
+        shell.openExternal('https://imgbed.cn');
+      }
+    });
+  }
+
+  // 根据平台创建不同的菜单结构
+  let template;
+  
+  if (process.platform === 'darwin') {
+    // macOS 菜单结构
+    template = [
+      {
+        label: appName,
+        submenu: [
+          {
+            label: `关于 ${appName}`,
+            click: showAboutDialog
+          },
+          { type: 'separator' },
+          {
+            label: '设置',
+            accelerator: 'Command+,',
+            click: () => {
+              createSettingsWindow();
+            }
+          },
+          { type: 'separator' },
+          {
+            label: '退出',
+            accelerator: 'Command+Q',
+            click: () => {
+              app.isQuitting = true;
+              app.quit();
+            }
+          }
+        ]
+      },
+      {
+        label: '帮助',
+        submenu: [
+          {
+            label: '关于',
+            click: showAboutDialog
+          }
+        ]
+      }
+    ];
+  } else {
+    // Windows/Linux 菜单结构
+    template = [
+      {
+        label: '帮助',
+        submenu: [
+          {
+            label: '设置',
+            accelerator: 'Ctrl+,',
+            click: () => {
+              createSettingsWindow();
+            }
+          },
+          { type: 'separator' },
+          {
+            label: '关于',
+            click: showAboutDialog
+          }
+        ]
+      }
+    ];
+  }
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 
 // 创建系统托盘
@@ -88,6 +184,15 @@ function createTray() {
             mainWindow.focus();
           }
         }
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: '设置',
+      click: () => {
+        createSettingsWindow();
       }
     },
     {
@@ -172,12 +277,30 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  // 设置快捷键管理器的主窗口引用
+  setMainWindow(mainWindow);
 }
 
 // 当 Electron 完成初始化时创建窗口和托盘
 app.whenReady().then(() => {
+  // 初始化设置窗口
+  initSettingsWindow();
+  
+  // 创建应用菜单栏
+  createApplicationMenu();
+  
   createWindow();
   createTray();
+
+  // 加载设置并注册快捷键
+  const settings = loadSettings();
+  if (settings.uploadShortcutEnabled) {
+    const result = registerShortcut(settings.uploadShortcut);
+    if (!result.success) {
+      console.error('注册快捷键失败:', result.error);
+    }
+  }
 
   app.on('activate', () => {
     // 在 macOS 上，当点击 dock 图标且没有其他窗口打开时
@@ -196,4 +319,9 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   // 不再自动退出，应用通过托盘继续运行
   // 用户可以通过托盘菜单退出应用
+});
+
+// 应用退出时注销所有快捷键
+app.on('will-quit', () => {
+  unregisterAll();
 });
